@@ -124,7 +124,7 @@ int Remove(PLIST *plist,int id){
         while(q!=NULL){
             if(q->pid == id){
                 p->next = q->next;//找到该进程，摘除
-                free(q);//释放空间
+                //free(q);//释放空间
                 return 1;//删除成功
             }
             p = p->next;
@@ -189,11 +189,12 @@ void block(PLIST *plist,PCB *nowPcb){
 }
 void Block(){
     //阻塞进程
-    int pid;
+    //int pid;
     fflush(stdin);  //清空缓冲区
     system("cls");  //清屏
     //Output();
     show();
+    /*
     printf("输入你想阻塞的进程号：");
     scanf("%d",&pid);
     printf("*********************************************\n\n");
@@ -201,6 +202,13 @@ void Block(){
         block(block_plist,run_plist);
     }else{
         printf("该进程处于非执行态！无法进行阻塞操作！\n");
+    }
+    */
+    if(run_plist!=NULL){
+        block(block_plist,run_plist);
+        Schedule();
+    }else{
+        printf("当前无正在执行的进程！无法进行阻塞操作！\n");
     }
     show();
 }
@@ -305,7 +313,7 @@ void Output(){
         b = b->next;
     }
     printf("└──────┴──────┴──────┘\n\n");
-    printf("执行队列\n");
+    printf("执行态进程\n");
     printf("┌──────┬──────┬──────┐\n");
     printf("│   进程ID   │   状态     │   优先级   │\n");
     if(run_plist!=NULL){
