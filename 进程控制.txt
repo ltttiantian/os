@@ -1,5 +1,6 @@
 ﻿#include <stdio.h>
 #include <stdlib.h>
+#include <windows.h>
 //state字段：0——就绪态；1——执行态；-1——阻塞态
 //flag字段；0——PCB未被占用，1——PCB已被占用
 //进程控制块结构体
@@ -29,6 +30,7 @@ void Create();//创建进程的函数
 void Delete();//撤销进程的函数
 void Block();//阻塞进程的函数
 void Wakeup();//唤醒进程的函数
+void Clear();
 void show();//显示界面
 void Output();//输出进程信息
 void initialize();//初始化
@@ -37,11 +39,9 @@ int main()
     char choose;//选择操作
     system("cls");//清屏
     initialize();//初始化
+    Output();
     show();//显示
     while(1){
-        //printf("  ************进程控制块信息************\n");
-        //Output();
-        //show();//显示
         scanf("%c",&choose);
         switch(choose){
         case '1':
@@ -57,26 +57,30 @@ int main()
             Wakeup();
             break;
         case '5':
-            Schedule();
+            Clear();
             break;
         case '6':
             exit(0);
             break;
-            }
+        }
     }
     return 0;
 }
 void initialize(){
     //初始化进程控制块队列，建立有三个结点的进程控制块队列
-    PCB *first;
-    PCB *first_b;
+    PCB *first;//就绪的进程控制块
+    PCB *first_b;//阻塞的进程控制块
     setPcb(&first,0,0);
     setPcb(&first_b,0,0);
     ready_plist = (PLIST *)malloc(sizeof(PLIST));//申请一个进程控制块队列大小的内存空间，该函数调用的返回值强转成PLIST类型，赋给变量plist
     block_plist = (PLIST *)malloc(sizeof(PLIST));
     ready_plist->first = first;//头指针
     block_plist->first = first_b;
-    run_plist=NULL;
+    run_plist = (PCB*)malloc(sizeof(PCB));
+    run_plist->pid = 1;
+    run_plist->state = 1;
+    run_plist->priority = 1;
+    run_plist->next = NULL;
 }
 int search(PLIST *plist,int id){
     //搜索当前进程是否存在
@@ -124,7 +128,6 @@ int Remove(PLIST *plist,int id){
         while(q!=NULL){
             if(q->pid == id){
                 p->next = q->next;//找到该进程，摘除
-                //free(q);//释放空间
                 return 1;//删除成功
             }
             p = p->next;
@@ -140,9 +143,6 @@ void Delete(){
     int tag_block;
     int tag;    //标记要删除的进程是否是正在运行的进程
     fflush(stdin);  //清空缓冲区
-    system("cls");  //清屏
-    //Output();
-    show();
     printf("输入你想撤销的进程号：");
     scanf("%d",&pid);
     printf("*********************************************\n\n");
@@ -154,32 +154,35 @@ void Delete(){
         Schedule();
     }
     if(tag_ready==0&&tag_block==0&&tag!=1){
-        printf("撤销失败！该进程不存在！\n");
+        printf("\033[31m 撤销失败！该进程不存在！\n\n\033[0m");
     }
+    Output();
     show();
 }
 void wakeup(PLIST *plist,int id){
     PCB *nowPcb = searchPCB(plist,id);
     Remove(plist,id);//将该进程从阻塞队列里删除
     nowPcb->state = 0;//将进程由阻塞态转为就绪态
-    printf("%d",nowPcb->pid);
+    nowPcb->next = NULL;
     insert(ready_plist,nowPcb);//将该进程插入就绪队列
 }
 void Wakeup(){
 //唤醒进程
     int pid;
     fflush(stdin);  //清空缓冲区
-    system("cls");  //清屏
-    //Output();
-    show();
     printf("输入你想唤醒的进程号：");
     scanf("%d",&pid);
     printf("*********************************************\n\n");
     if(search(block_plist,pid)){
         wakeup(block_plist,pid);
+        if(run_plist==NULL){
+            Schedule();
+            printf("\033[33m 由于无运行态进程，当前唤醒的进程自动调度至运行态！\n\n\033[0m");
+        }
     }else{
-        printf("该进程未处于阻塞态！无法进行唤醒操作！\n");
+        printf("\033[31m 该进程未处于阻塞态！无法进行唤醒操作！\n\n\033[0m");
     }
+    Output();
     show();
 }
 void block(PLIST *plist,PCB *nowPcb){
@@ -188,28 +191,14 @@ void block(PLIST *plist,PCB *nowPcb){
     insert(block_plist,nowPcb);
 }
 void Block(){
-    //阻塞进程
-    //int pid;
     fflush(stdin);  //清空缓冲区
-    system("cls");  //清屏
-    //Output();
-    show();
-    /*
-    printf("输入你想阻塞的进程号：");
-    scanf("%d",&pid);
-    printf("*********************************************\n\n");
-    if(run_plist!=NULL && pid==run_plist->pid){
-        block(block_plist,run_plist);
-    }else{
-        printf("该进程处于非执行态！无法进行阻塞操作！\n");
-    }
-    */
     if(run_plist!=NULL){
         block(block_plist,run_plist);
         Schedule();
     }else{
-        printf("当前无正在执行的进程！无法进行阻塞操作！\n");
+        printf("\033[31m 当前无正在执行的进程！无法进行阻塞操作！\n\n\033[0m");
     }
+    Output();
     show();
 }
 void setPcb(PCB **newpcb,int id,int prio){
@@ -221,32 +210,32 @@ void setPcb(PCB **newpcb,int id,int prio){
     (*newpcb)->next = NULL;
 }
 void Create(){
-   // int tag1,tag2,tag3;
     int pid,prio;
     int tag_ready,tag_block;//标记要创建的进程是否已在就绪，阻塞队列里存在
     int tag=0;
     PCB *newPCB;
     fflush(stdin);  //清空缓冲区
-    system("cls");  //清屏
-    //Output();
-    show();
     printf("输入你想创建的进程号：");
     scanf("%d",&pid);
-    printf("\n");
     printf("输入你想创建的进程的优先级：");
     scanf("%d",&prio);
     printf("*********************************************\n\n");
     tag_ready = search(ready_plist,pid);//0——未找到，1——找到
     tag_block = search(block_plist,pid);
-    if(run_plist!=NULL && run_plist->pid==pid){
+    if(run_plist!=NULL && run_plist->pid==pid){     //要插入的进程处于运行态
         tag=1;
     }
-    if(tag_ready==0 && tag_block==0 && tag==0){
+    if(tag_ready==0 && tag_block==0 && tag==0){     //要插入的进程pid不存在，可以插入
         setPcb(&newPCB,pid,prio);
         insert(ready_plist,newPCB);
+        if(run_plist==NULL){
+            Schedule();
+            printf("\033[33m 由于无运行态进程，当前创建的进程自动调度至运行态！\n\n\033[0m");
+        }
     }else{
-        printf("该进程已存在！无法创建进程！\n");
+        printf("\033[31m 该进程已存在！无法创建进程！\n\n\033[0m");
     }
+    Output();
     show();
 }
 void Schedule(){
@@ -261,16 +250,12 @@ void Schedule(){
             insert(block_plist,run_plist);
         }
         run_plist = p;//将该进程加入运行的队列
-        show();
     }else{
-        printf("无进程就绪！无法调度！\n");
+        printf("\033[31m 无进程就绪！无法调度！\n\n\033[0m");
+        printf("\033[31m 请创建新的进程或者唤醒进程，并进行进程调度！\n\n\033[0m");
     }
 }
 void show(){
-    //显示初始界面
-    printf("\n");
-    printf("  ************进程控制块信息************\n");
-    Output();
     printf("\n");
     printf("  ***************  操作  ***************\n");
     printf("┌────────────────────┐\n");
@@ -282,7 +267,7 @@ void show(){
     printf("│                                        │\n");
     printf("│            4.唤醒进程                  │\n");
     printf("│                                        │\n");
-    printf("│     5.基于优先权的进程调度             │\n");
+    printf("│            5.清    屏                  │\n");
     printf("│                                        │\n");
     printf("│            6.退出程序                  │\n");
     printf("└────────────────────┘\n");
@@ -291,6 +276,7 @@ void show(){
 void Output(){
     PCB *p = ready_plist->first->next;
     PCB *b = block_plist->first->next;
+    printf("  ************进程控制块信息************\n");
     printf("就绪队列\n");
     printf("┌──────┬──────┬──────┐\n");
     printf("│   进程ID   │   状态     │   优先级   │\n");
@@ -323,4 +309,9 @@ void Output(){
         printf("│%12d│\n",run_plist->priority);
     }
     printf("└──────┴──────┴──────┘\n");
+}
+void Clear(){
+    system("cls");//清屏
+    Output();
+    show();
 }
