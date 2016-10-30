@@ -37,10 +37,11 @@ int main()
     char choose;//选择操作
     system("cls");//清屏
     initialize();//初始化
+    show();//显示
     while(1){
-        printf("  ************进程控制块信息************\n");
-        Output();
-        show();//显示
+        //printf("  ************进程控制块信息************\n");
+        //Output();
+        //show();//显示
         scanf("%c",&choose);
         switch(choose){
         case '1':
@@ -140,7 +141,7 @@ void Delete(){
     int tag;    //标记要删除的进程是否是正在运行的进程
     fflush(stdin);  //清空缓冲区
     system("cls");  //清屏
-    Output();
+    //Output();
     show();
     printf("输入你想撤销的进程号：");
     scanf("%d",&pid);
@@ -169,7 +170,7 @@ void Wakeup(){
     int pid;
     fflush(stdin);  //清空缓冲区
     system("cls");  //清屏
-    Output();
+    //Output();
     show();
     printf("输入你想唤醒的进程号：");
     scanf("%d",&pid);
@@ -191,7 +192,7 @@ void Block(){
     int pid;
     fflush(stdin);  //清空缓冲区
     system("cls");  //清屏
-    Output();
+    //Output();
     show();
     printf("输入你想阻塞的进程号：");
     scanf("%d",&pid);
@@ -219,7 +220,7 @@ void Create(){
     PCB *newPCB;
     fflush(stdin);  //清空缓冲区
     system("cls");  //清屏
-    Output();
+    //Output();
     show();
     printf("输入你想创建的进程号：");
     scanf("%d",&pid);
@@ -259,9 +260,9 @@ void Schedule(){
 }
 void show(){
     //显示初始界面
-    //printf("\n");
-    //printf("  ************进程控制块信息************\n");
-    //Output();
+    printf("\n");
+    printf("  ************进程控制块信息************\n");
+    Output();
     printf("\n");
     printf("  ***************  操作  ***************\n");
     printf("┌────────────────────┐\n");
